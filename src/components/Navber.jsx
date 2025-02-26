@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 
 const Navber = () => {
     return (
@@ -22,9 +23,9 @@ const Navber = () => {
       <li><a>Dashboard</a></li>
     </ul>
   </div>
-  <div className="navbar-end">
+  <Link to="login"  className="navbar-end">
     <a className="btn">Login</a>
-  </div>
+  </Link>
 </div>
         </div>
     );
