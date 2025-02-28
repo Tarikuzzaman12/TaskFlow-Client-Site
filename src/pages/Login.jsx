@@ -1,43 +1,24 @@
-import  { useContext, useRef, useState } from 'react';
+import { useContext, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FcGoogle } from 'react-icons/fc';
 import { AuthContext } from '../provider/AuthProvider.jsx';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { FaEye, FaEyeSlash } from 'react-icons/fa';
-// import { sendPasswordResetEmail } from 'firebase/auth';
-// import { auth } from '../Firebase/firebaseConfig';
 
 const Login = () => {
     const { googleSignIn, loginWithEmailPassword, setUser } = useContext(AuthContext);
     const [passwordError, setPasswordError] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const {user}=useContext(AuthContext)
     const emailRef = useRef();
     const navigate = useNavigate();
 
-    // Handle Forgot Password
-    // const handleForgetPassword = () => {
-    //     const email = emailRef.current.value; 
-    //     if (!email) {
-    //         toast.warning('Please provide a valid email address!');
-    //     } else {
-    //         sendPasswordResetEmail(auth, email)
-    //             .then(() => {
-    //                 toast.success('Password reset email sent! Check your inbox.');
-    //             })
-    //             .catch((error) => {
-    //                 toast.error(`Error: ${error.message}`);
-    //             });
-    //     }
-    // };
-
-    // Handle Login
     const handleLogin = (e) => {
         e.preventDefault();
         const email = e.target.email.value;
         const password = e.target.password.value;
 
-        // Email and password validation
         if (!/(?=.*[A-Z])/.test(password)) {
             setPasswordError('Password must contain at least one uppercase letter.');
             return;
@@ -50,33 +31,68 @@ const Login = () => {
             setPasswordError('Password must be at least 6 characters long.');
             return;
         }
-        setPasswordError(''); 
+        setPasswordError('');
 
-      
         loginWithEmailPassword(email, password)
             .then((res) => {
-                setUser(res.user);
+                const loggedInUser = res.user;
+                setUser(loggedInUser);
+                saveUserToDatabase(loggedInUser); // Database-এ পাঠানো
                 toast.success('Login successful!');
                 e.target.reset();
                 navigate('/');
             })
             .catch((error) => {
-                const errorMessage = error.message;
-                toast.error(`Login failed: ${errorMessage}`);
+                toast.error(`Login failed: ${error.message}`);
             });
     };
+
+    const handleGoogleSignIn = () => {
+        googleSignIn()
+            .then((res) => {
+                const googleUser = res.user;
+                setUser(googleUser);
+                saveUserToDatabase(googleUser); // Google user-ও database-এ পাঠানো
+                toast.success('Google Sign-In successful!');
+                navigate('/');
+            })
+            .catch((error) => {
+                toast.error(`Google Sign-In failed: ${error.message}`);
+            });
+    };
+
+    // User Data Save Function
+    const saveUserToDatabase = () => {
+        const userData = {
+            name: user.displayName || 'Unnamed User',
+            email: user.email,
+            photoURL: user.photoURL || '',
+            lastLogin: new Date().toISOString(),
+        };
+    
+        fetch('http://localhost:5000/users', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(userData),
+        })
+        .then(res => res.json())
+        .then(data => {
+            console.log('User save response:', data);
+        })
+        .catch(err => {
+            console.error('Failed to save user:', err);
+        });
+    };
+    
 
     return (
         <div className="hero bg-base-200 min-h-screen">
             <div className="hero-content flex-col lg:flex-row-reverse">
-                <div className="text-center lg:text-left"></div>
-                <div className="card bg-base-100 w-full max-w-sm shrink-0 shadow-2xl">
+                <div className="card bg-base-100 w-full max-w-sm shadow-2xl">
                     <form onSubmit={handleLogin} className="card-body">
                         <h1 className="text-5xl font-bold">Login now!</h1>
                         <div className="form-control">
-                            <label className="label">
-                                <span className="label-text">Email</span>
-                            </label>
+                            <label className="label">Email</label>
                             <input
                                 type="email"
                                 placeholder="Enter your email"
@@ -87,9 +103,7 @@ const Login = () => {
                             />
                         </div>
                         <div className="form-control relative">
-                            <label className="label">
-                                <span className="label-text">Password</span>
-                            </label>
+                            <label className="label">Password</label>
                             <input
                                 type={showPassword ? 'text' : 'password'}
                                 placeholder="Enter your password"
@@ -111,8 +125,8 @@ const Login = () => {
                         </div>
                         <button
                             type="button"
-                            onClick={googleSignIn}
-                            className="btn btn-outline mt-4 text-green-500 items-center"
+                            onClick={handleGoogleSignIn}
+                            className="btn btn-outline mt-4 flex items-center gap-2"
                         >
                             <FcGoogle /> Sign in with Google
                         </button>
